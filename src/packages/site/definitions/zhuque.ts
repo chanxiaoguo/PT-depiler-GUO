@@ -1,15 +1,15 @@
+import type { AxiosRequestConfig, AxiosResponse } from "axios";
+
 import {
   EResultParseStatus,
   type ISearchInput,
-  ISiteMetadata,
+  type ISiteMetadata,
   type ITorrent,
   type ITorrentTag,
   type IUserInfo,
 } from "../types";
-
-import PrivateSite from "@ptd/site/schemas/AbstractPrivateSite.ts";
-import type { AxiosRequestConfig, AxiosResponse } from "axios";
-import { retrieveStore } from "@ptd/site/utils/adapter.ts";
+import { retrieveStore } from "../utils/adapter.ts";
+import PrivateSite from "../schemas/AbstractPrivateSite.ts";
 
 const categoryMap: Record<number, string> = {
   501: "电影",
@@ -164,6 +164,7 @@ export const siteMetadata: ISiteMetadata = {
           },
           uploaded: { selector: "data.uploaded" },
           downloaded: { selector: "data.downloaded" },
+          trueDownloaded: { selector: "data.trueDownloaded" },
           bonus: { selector: "data.bonus" },
           seedingBonus: { selector: "data.seedingPoints" },
           bonusPerHour: { selector: "data.bonusPerHour" },
@@ -172,6 +173,11 @@ export const siteMetadata: ISiteMetadata = {
           seedingSize: { selector: "data.seedingSize" },
           messageCount: { selector: "data.messageCount" },
           csrfToken: { selector: "data.csrfToken" },
+          lastAccessAt: {
+            selector: "data.lastUpdateTime",
+            filters: [(v: string | number) => Number(v) * 1000],
+          },
+          invites: { selector: "data.invites" },
         },
       },
     ],

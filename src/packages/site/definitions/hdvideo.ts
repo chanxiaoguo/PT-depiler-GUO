@@ -1,6 +1,8 @@
 import type { ISiteMetadata } from "../types";
+import { SchemaMetadata } from "../schemas/NexusPHP";
 
 export const siteMetadata: ISiteMetadata = {
+  ...SchemaMetadata,
   version: 1,
   id: "hdvideo",
   name: "HDVideo",
@@ -10,11 +12,16 @@ export const siteMetadata: ISiteMetadata = {
   type: "private",
   schema: "NexusPHP",
 
-  urls: ["https://hdvideo.one/"],
+  urls: ["https://hdvideo.top/"],
 
-  isDead: true,
+  formerHosts: ["hdvideo.one"],
 
   levelRequirements: [
+    {
+      id: 0,
+      name: "User",
+      privilege: "",
+    },
     {
       id: 1,
       name: "Power User",

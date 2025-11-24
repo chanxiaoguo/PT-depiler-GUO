@@ -1,3 +1,6 @@
+/**
+ * @JackettIssue https://github.com/Jackett/Jackett/issues/13943
+ */
 import type { ISiteMetadata } from "../types";
 
 export const siteMetadata: ISiteMetadata = {
@@ -15,6 +18,11 @@ export const siteMetadata: ISiteMetadata = {
   isDead: true,
 
   levelRequirements: [
+    {
+      id: 0,
+      name: "User",
+      privilege: "",
+    },
     {
       id: 1,
       name: "Power User",

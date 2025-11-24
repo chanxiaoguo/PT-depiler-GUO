@@ -2,8 +2,10 @@ import Sizzle from "sizzle";
 import { get, isEmpty, set } from "es-toolkit/compat";
 import { chunk, pascalCase, pick, toMerged, union } from "es-toolkit";
 import { type AxiosError, type AxiosRequestConfig, type AxiosResponse } from "axios";
+import { supportSocialSite } from "@ptd/social";
 
-import { axios, retrieve, store } from "../utils/adapter.ts";
+// noinspection ES6PreferShortImport
+import { axios, isCloudflareBlocked, retrieve, sleep, store } from "../utils/adapter";
 import {
   EResultParseStatus,
   IElementQuery,
@@ -11,6 +13,7 @@ import {
   ISiteMetadata,
   ITorrent,
   NeedLoginError,
+  CFBlockedError,
   NoTorrentsError,
   IAdvanceKeywordSearchConfig,
   ISearchInput,
@@ -20,6 +23,7 @@ import {
   ISearchEntryRequestConfig,
   IParsedTorrentListPage,
   TSchemaMetadataListSelectors,
+  ETorrentStatus,
 } from "../types";
 import {
   definedFilters,
@@ -29,6 +33,7 @@ import {
   parseSizeString,
   parseTimeWithZone,
   tryToNumber,
+  hasNonLatinCharacters,
 } from "../utils";
 
 export const SchemaMetadata: Partial<ISiteMetadata> = {
@@ -75,6 +80,12 @@ export default class BittorrentSite {
     return true;
   }
 
+  protected async sleepAction(ms: number | undefined): Promise<void> {
+    if (ms && ms > 0) {
+      await sleep(ms);
+    }
+  }
+
   protected async storeRuntimeSettings<T extends any>(key: string, value: T): Promise<T> {
     this.userConfig.runtimeSettings ??= {}; // 确保 runtimeSettings 存在
     this.userConfig.runtimeSettings[key] = value; // 更新当前实例的 runtimeSettings
@@ -91,6 +102,9 @@ export default class BittorrentSite {
     axiosConfig.baseURL ??= this.url;
     axiosConfig.url ??= "/";
     axiosConfig.timeout ??= this.userConfig.timeout ?? 30e3;
+
+    // 如果站点有请求延迟，则等待一段时间
+    await this.sleepAction(this.metadata.requestDelay ?? 0);
 
     let req: AxiosResponse;
     try {
@@ -116,7 +130,11 @@ export default class BittorrentSite {
       req = (e as AxiosError).response!;
     }
 
-    // 首先检查是否需要登录
+    if (isCloudflareBlocked(req)) {
+      throw new CFBlockedError();
+    }
+
+    // 随后检查是否需要登录
     if (checkLogin && !this.loggedCheck(req!)) {
       throw new NeedLoginError();
     }
@@ -167,39 +185,65 @@ export default class BittorrentSite {
 
     console?.log(`[Site] ${this.name} start search with merged searchEntry:`, searchEntry);
 
-    // 2. 生成对应站点的基础 requestConfig
+    // 2.1 检查 keywords 是否为空
+    if (searchEntry.skipWhiteSpacePlaceholder === true && !keywords) {
+      console?.log(`[Site] ${this.name} skipped due to empty keywords`);
+      result.status = EResultParseStatus.passParse;
+      return result;
+    }
+
+    // 2.2 检查字符集兼容性并过滤站点
+    if (searchEntry.skipNonLatinCharacters === true && keywords && hasNonLatinCharacters(keywords)) {
+      console?.log(`[Site] ${this.name} skipped due to non-Latin characters in query:`, keywords);
+      result.status = EResultParseStatus.passParse;
+      return result;
+    }
+
+    // 3. 生成对应站点的基础 requestConfig
     let requestConfig: AxiosRequestConfig = toMerged(
       { url: "/", responseType: "document", params: {}, data: {} }, // 最基础的垫片，baseUrl 会在 request 方法中被补全，此处不用额外声明
       searchEntry.requestConfig || {}, // 使用默认配置覆盖垫片配置，如果是站点是 json 返回，应该在此处覆写 responseType，并准备基础参数
     );
 
-    // 3. 预检查 keywords 是否为高级搜索词，如果是，则查找对应的 searchEntry.advanceKeywordParams[*] 并改写 keywords
-    let advanceKeywordType: string | undefined;
+    // 4. 预检查 keywords 是否为高级搜索词，如果是，则查找对应的 searchEntry.advanceKeywordParams[*] 并改写 keywords
     let advanceKeywordConfig: IAdvanceKeywordSearchConfig | false = false;
-    if (keywords && searchEntry.advanceKeywordParams) {
-      for (const [advanceField, advanceConfig] of Object.entries(searchEntry.advanceKeywordParams)) {
+    if (keywords) {
+      // 生成支持的高级搜索词前缀
+      const advanceKeywordFields = Object.keys(searchEntry.advanceKeywordParams ?? {});
+
+      for (const advanceField of union(advanceKeywordFields, supportSocialSite)) {
         if (keywords.startsWith(`${advanceField}|`)) {
+          // 先改写 keywords， 去除掉我们额外添加的 `${advanceField}|` 前缀
+          keywords = keywords?.replace(`${advanceField}|`, "");
+
+          // 检查是否有对应的高级搜索词配置
+          let advanceConfig = searchEntry?.advanceKeywordParams?.[advanceField];
+          if (typeof advanceConfig === "undefined") {
+            if (advanceField == "imdb") {
+              advanceConfig = { enabled: true }; // imdb 格式fallback到普通关键词搜索
+            } else {
+              advanceConfig = false; // 其他高级搜索词格式（douban|, bangumi|, anidb|, tmdb|, tvdb|, mal|）直接跳过
+            }
+          }
+
           // 检查是否跳过
           if (advanceConfig === false || advanceConfig.enabled === false) {
             result.status = EResultParseStatus.passParse;
             return result;
           }
 
-          // 改写 keywords 并缓存 transformer
-          keywords = keywords?.replace(`${advanceField}|`, "");
-          advanceKeywordType = advanceField;
           advanceKeywordConfig = advanceConfig;
           break;
         }
       }
     }
 
-    // 4. 首先将搜索关键词根据 keywordsParam 放入请求配置中，注意如果是 advanceKeyword 已经被去除了前缀 `${advanceKeywordType}|`
+    // 5. 首先将搜索关键词根据 keywordsParam 放入请求配置中，注意如果是 advanceKeyword 已经被去除了前缀 `${advanceKeywordType}|`
     if (keywords) {
       set(requestConfig, searchEntry.keywordPath || "params.keywords", keywords || "");
     }
 
-    // 5. 如果是高级搜索词搜索，则在对应基础上改写 AxiosRequestConfig
+    // 6. 如果是高级搜索词搜索，则在对应基础上改写 AxiosRequestConfig
     if (advanceKeywordConfig) {
       if (advanceKeywordConfig.requestConfig) {
         requestConfig = toMerged(requestConfig, advanceKeywordConfig.requestConfig || {});
@@ -210,14 +254,19 @@ export default class BittorrentSite {
       }
     }
 
-    // 6. 如果有 requestConfigTransformer，则会在最后一步对请求配置进行处理
+    // 7. 如果有 requestConfigTransformer，则会在最后一步对请求配置进行处理
     if (typeof searchEntry.requestConfigTransformer === "function") {
       requestConfig = searchEntry.requestConfigTransformer({ keywords, searchEntry, requestConfig });
     }
 
+    // 如果站点有搜索请求延迟，则等待一段时间
+    if ((searchEntry.requestDelay ?? 0) > 0) {
+      await sleep(searchEntry.requestDelay!);
+    }
+
     console?.log(`[Site] ${this.name} start search with requestConfig:`, requestConfig);
 
-    // 7. 请求页面并转化为document
+    // 8. 请求页面并转化为document
     try {
       const req = await this.request(requestConfig);
       result.data = await this.transformSearchPage(req.data, { keywords, searchEntry, requestConfig });
@@ -228,7 +277,9 @@ export default class BittorrentSite {
       }
       result.status = EResultParseStatus.parseError;
 
-      if (e instanceof NeedLoginError) {
+      if (e instanceof CFBlockedError) {
+        result.status = EResultParseStatus.CFBlocked;
+      } else if (e instanceof NeedLoginError) {
         result.status = EResultParseStatus.needLogin;
       } else if (e instanceof NoTorrentsError) {
         result.status = EResultParseStatus.noResults;
@@ -247,11 +298,10 @@ export default class BittorrentSite {
     let url = uri;
 
     if (uri.length > 0 && !uri.startsWith("magnet:")) {
-      const baseUrl = requestConfig.baseURL || this.url;
       if (uri.startsWith("//")) {
         // 当 传入的uri 以 /{2,} 开头时，被转换成类似 https?:///xxxx/xxxx 的形式，
         // 虽不符合url规范，但是浏览器容错高，所以不用担心 2333
-        const urlHelper = new URL(baseUrl);
+        const urlHelper = new URL(requestConfig.baseURL || this.url);
         url = `${urlHelper.protocol}:${uri}`;
       } else if (uri.slice(0, 4) !== "http") {
         // 基于请求地址，处理 ./xxx, xxxx, /xxxx 等相对路径
@@ -376,6 +426,43 @@ export default class BittorrentSite {
   }
 
   /**
+   * 处理数组选择器，依次尝试每个选择器直到找到匹配的元素
+   * @param selectors 选择器或选择器数组
+   * @param context 查找上下文 (Document或JSON对象)
+   * @param options 可选配置
+   * @returns 找到的元素数组
+   * @protected
+   */
+  protected findElementsBySelectors(
+    selectors: string | string[] | ":self" | (string | ":self")[],
+    context: Document | object | any,
+    options: { isJson?: boolean } = {},
+  ): any[] {
+    const selectorArray = ([] as (string | ":self")[]).concat(selectors);
+    let foundElements: any[] = [];
+
+    for (const selector of selectorArray) {
+      if (options.isJson || !(context instanceof Document)) {
+        // JSON 数据处理
+        if (selector === ":self") {
+          foundElements = context;
+        } else {
+          foundElements = get(context, selector);
+        }
+      } else {
+        // Document 处理
+        foundElements = Sizzle(selector as string, context);
+      }
+
+      if (foundElements && foundElements.length > 0) {
+        break;
+      }
+    }
+
+    return foundElements || [];
+  }
+
+  /**
    * 如何解析 JSON 或者 Document，获得种子详情列表
    */
   public async transformSearchPage(doc: Document | object | any, searchConfig: ISearchInput): Promise<ITorrent[]> {
@@ -387,10 +474,10 @@ export default class BittorrentSite {
     const rowsSelector = searchEntry!.selectors.rows;
     const torrents: ITorrent[] = [];
 
-    let trs: any;
+    // 使用抽象方法处理数组选择器
+    let trs = this.findElementsBySelectors(rowsSelector.selector, doc, { isJson: !(doc instanceof Document) });
 
     if (doc instanceof Document) {
-      trs = Sizzle(rowsSelector.selector as string, doc);
       if (rowsSelector.filter) {
         trs = rowsSelector.filter(trs);
       } else {
@@ -414,9 +501,6 @@ export default class BittorrentSite {
         }
       }
     } else {
-      // 同样定义一个 :self 以防止对于JSON返回的情况下，所有items在顶层字典（实际是 Object[] ）下
-      trs = rowsSelector.selector === ":self" ? doc : get(doc, rowsSelector.selector as string);
-
       if (rowsSelector.filter) {
         trs = rowsSelector.filter(trs);
       }
@@ -499,7 +583,7 @@ export default class BittorrentSite {
     typeof torrent.completed != "undefined" && (torrent.completed = tryToNumber(torrent.completed));
     typeof torrent.comments != "undefined" && (torrent.comments = tryToNumber(torrent.comments));
     typeof torrent.category != "undefined" && (torrent.category = tryToNumber(torrent.category));
-    typeof torrent.status != "undefined" && (torrent.status = tryToNumber(torrent.status));
+    typeof torrent.status == "undefined" && (torrent.status = ETorrentStatus.unknown);
 
     // 仅当设置了时区偏移时，才进行转换
     if (this.metadata.timezoneOffset && typeof torrent.time !== "undefined") {
@@ -665,7 +749,12 @@ export default class BittorrentSite {
       const { data } = await this.request<any>(
         toMerged({ responseType: "document", url: torrent.url }, this.metadata.detail?.requestConfig ?? {}),
       );
-      return this.getFieldData(data, this.metadata.detail.selectors.link);
+      torrent.link = this.getFieldData(data, this.metadata.detail.selectors.link) as string;
+    }
+
+    if (this.userConfig.downloadLinkAppendix) {
+      // 如果用户配置了下载链接后缀，则在链接后追加
+      torrent.link = `${torrent.link}${this.userConfig.downloadLinkAppendix}`;
     }
 
     return torrent.link!;

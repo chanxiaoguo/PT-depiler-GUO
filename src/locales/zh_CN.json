@@ -43,7 +43,9 @@
     "test": "测试",
     "visit": "访问",
     "version": "版本",
-    "howToUse": "如何使用？"
+    "howToUse": "如何使用？",
+    "import": "导入",
+    "export": "导出"
   },
   "layout": {
     "header": {
@@ -52,6 +54,7 @@
       "navBarTip": "点击显示/隐藏导航栏",
       "searchPlan": {
         "all": "@:manifest.searchPlanAll",
+        "singleSite": "@:manifest.searchPlanSingleSite",
         "default": "@:manifest.searchPlanDefault"
       },
       "searchTip": "输入种子关键字、IMDb编号进行搜索",
@@ -63,9 +66,21 @@
   "manifest": {
     "extDesc": "PT Depiler",
     "extName": "PT Depiler",
-    "searchPlanAll": "全站",
+    "searchPlanAll": "全部站点",
+    "searchPlanSingleSite": "单个站点",
     "searchPlanDefault": "默认",
-    "omniboxSearch": "在 [ $1 ] 中搜索 $2"
+    "omniboxSearch": "在 [ $1 ] 中搜索 $2",
+    "contextMenuSearch": "使用 PT Depiler  搜索 \"%s\" 相关的种子",
+    "contextMenuSearchInDefault": "在默认方案中搜索",
+    "contextMenuSearchInSolution": "在指定方案中搜索",
+    "contextMenuSearchInSite": "在指定站点中搜索",
+    "contextMenuSearchInThisSite": "在本站点中搜索",
+    "contextMenuSendToDownloader": "使用 PT Depiler 下载链接",
+    "contextMenuSendToDownloaderAdvanced": "高级推送",
+    "contextMenuSendToDownloaderIn": "推送到 $1 -> $2",
+    "contextMenuSendToDownloaderDefaultFolder": "默认路径",
+    "notificationSendLinkToDownloaderSuccess": "已成功将链接发送到下载器 [$1]",
+    "notificationSendLinkToDownloaderFailure": "将链接发送到下载器 [$1] 失败"
   },
   "route": {
     "About": {
@@ -97,18 +112,7 @@
       "SetDownloader": "下载器设置",
       "SetMediaServer": "媒体服务器设置",
       "SetSearchSolution": "搜索方案定义",
-      "SetSite": "站点设置",
-      "SearchConfig": {
-        "siteSearchConfig": "站点搜索配置",
-        "siteQueueConcurrency": "请求队列长度",
-        "saveLastSearchFilter": "保存上一次使用的搜索筛选词",
-        "mediaServerSearchConfig": "媒体服务器搜索配置",
-        "mediaQueueConcurrency": "请求队列长度",
-        "mediaSearchLimit": "单次搜索结果数量",
-        "mediaSearchLimitMessage": "请不要一次性加载过多的搜索结果，未作 virtual‑scroll 优化，可能会导致浏览器卡死，同时也会影响媒体服务器的性能",
-        "autoLoadInitialMediaWall": "自动加载首屏媒体墙",
-        "autoLoadMoreMediaOnScroll": "当滚动到页面底部时，自动加载新的媒体墙"
-      }
+      "SetSite": "站点设置"
     }
   },
   "checkSwitch": {
@@ -137,14 +141,16 @@
     "seedingSize": "做种量",
     "seedingTime": "做种时间",
     "averageSeedingTime": "平均做种时间",
-    "bonus": "魔力值/积分",
+    "bonus": "积分",
     "seedingBonus": "做种积分",
     "bonusPerHour": "时魔值",
     "uploads": "发布数",
     "leeching": "下载数量",
     "snatches": "完成种子数",
     "posts": "发布帖子数",
-    "hnrUnsatisfied": "H&R 未满足的数量"
+    "hnrPreWarning": "H&R 预警的数量",
+    "hnrUnsatisfied": "H&R 未满足的数量",
+    "adoptions": "认领数"
   },
   "resultParseStatus": {
     "unknownError": "未知错误！",
@@ -153,6 +159,8 @@
     "success": "获取成功！",
     "parseError": "解析错误！",
     "passParse": "未启用！",
+    "CFBlocked": "CloudFlare 错误！",
+    "CFBlockedNotes": "CloudFlare 返回的错误，可能是因为站点启用了 CloudFlare 的安全防护，导致无法获取数据。可以先尝试手动访问一次站点，以通过 CF 验证。如果不起作用，请等待站点自行恢复。",
     "needLogin": "需要登录！",
     "noResults": "无结果！",
     "unknown": "未知状态！"
@@ -189,15 +197,25 @@
       "status": "下载状态"
     }
   },
+  "torrent": {
+    "status": {
+      "unknown": "未知",
+      "downloading": "下载中",
+      "seeding": "做种中",
+      "inactive": "未活动",
+      "completed": "已完成"
+    }
+  },
   "MediaServerEntity": {
     "searchPlaceholder": "搜索词",
-    "detail": "详情"
+    "detail": "详情",
+    "loadMore": "加载更多",
+    "noItems": "暂无内容，请使用搜索框或点击加载更多按钮"
   },
   "MyData": {
     "index": {
       "flushSelectSite": "刷新数据",
       "flushCancel": "取消刷新",
-      "tableFontSize": "表格字体大小",
       "joinTimeFormat": "入站时间显示",
       "joinTimeFormatOptions": {
         "alive": "相对时间",
@@ -215,6 +233,9 @@
       "showHnR": "显示 H&R",
       "showSeedingBonus": "显示做种积分",
       "updateAtFormatAsAlive": "更新时间显示为相对时间",
+      "showIntervalAsDate": "等级要求时间显示为日期格式",
+      "simplifyBonusNumbers": "简化积分数字显示",
+      "showBonusNeededInterval": "等级要求中展示积分预估时间",
       "multiOpen": "批量打开",
       "viewTimeline": "时间轴",
       "viewStatistic": "数据图表",
@@ -233,8 +254,11 @@
       "levelName": "等级",
       "userData": "数据量",
       "trueUserData": "真实数据量",
+      "invites": "邀请数",
       "joinTime": "入站时间",
-      "updateAt": "数据更新于",
+      "lastAccessAt": "最近访问时间",
+      "lastAccessDurationNote": "已经 {0} 天未访问了",
+      "updateAt": "更新时间",
       "action": {
         "viewHistoryData": "查看历史数据",
         "flushData": "刷新数据"
@@ -278,6 +302,7 @@
       "downloaded": "下载量",
       "seeding": "做种数",
       "seedingSize": "做种量",
+      "bonus": "积分值",
       "bonusPerHour": "时魔值",
       "ratio": "分享率",
       "siteName": "站点名称",
@@ -301,9 +326,10 @@
       },
       "alert": {
         "enterKeyword": "请输入搜索关键词开始搜索",
-        "statusButton": "搜索情况",
+        "searchStatus": "搜索情况",
         "paused": "搜索暂停中…",
         "searching": "搜索中…",
+        "searchProgress": "已接收 {0} 条结果，搜索仍在进行……",
         "snapshot": "搜索快照",
         "plan": "搜索方案",
         "keyword": "关键词",
@@ -314,15 +340,21 @@
         "start": "开始搜索队列",
         "pause": "暂停搜索队列",
         "cancel": "取消当前等待的搜索",
-        "retry": "重新搜索"
+        "retry": "重新搜索",
+        "retryFailed": "重新搜索失败的方案（如 @:resultParseStatus.unknownError , @:resultParseStatus.parseError , @:resultParseStatus.CFBlocked , @:resultParseStatus.needLogin ）",
+        "saveSnapshot": "保存搜索快照"
       },
       "filterLabel": "过滤搜索结果",
+      "selectedTorrents": "已选择 {0} 个种子",
       "showSiteName": "显示站点名称",
       "showTorrentTag": "显示种子标签",
       "showTorrentSubtitle": "显示种子副标题",
       "showSocialInformation": "显示媒体评价信息",
       "socialInformationSearchOnNewTab": "媒体评价信息搜索在新标签页中打开",
       "uploadAtFormatAsAlive": "上传时间显示为相对时间"
+    },
+    "siteFilter": {
+      "all": "全部站点"
     },
     "AdvanceFilterGenerateDialog": {
       "date": {
@@ -365,16 +397,37 @@
         "dark": "暗黑模式",
         "index": "页面显示模式",
         "light": "明亮模式"
-      }
+      },
+      "socialSiteSearchBy": {
+        "id": "按 ID 搜索",
+        "title": "按 主标题 搜索",
+        "imdb": "按 IMDb 编号 搜索",
+        "chosen": "让我选择"
+      },
+      "tableMultiSortNote": "多列排序使用方法：点击任意表头字段开始排序，字段上会显示数字“1”。再点击其他字段，依次显示“2”“3”，表示排序优先级。再次点击相同字段可切换升序、降序或取消排序。排序顺序由这些数字决定，数字越小优先级越高。"
+    },
+    "searchEntity": {
+      "siteSearchConfig": "站点搜索配置",
+      "siteQueueConcurrency": "请求队列长度",
+      "saveLastSearchFilter": "保存上一次使用的搜索筛选词",
+      "forceImdbIdMatchFilter": "使用 IMDb 搜索时，在搜索结果中滤去站点返回的IMDb号不匹配的结果",
+      "quickSiteFilter": "直接显示站点筛选栏",
+      "mediaServerSearchConfig": "媒体服务器搜索配置",
+      "mediaQueueConcurrency": "请求队列长度",
+      "mediaSearchLimit": "单次搜索结果数量",
+      "mediaSearchLimitMessage": "请不要一次性加载过多的搜索结果，未作 virtual‑scroll 优化，可能会导致浏览器卡死，同时也会影响媒体服务器的性能",
+      "autoLoadInitialMediaWall": "自动加载首屏媒体墙",
+      "autoLoadMoreMediaOnScroll": "当滚动到页面底部时，自动加载新的媒体墙"
     },
     "download": {
-      "localDownloadMethod": {
+      "localDownloadMethod": "本地下载方式",
+      "localDownloadMethodOptions": {
         "web": "网页打开",
-        "webTip": "打开下载链接对应的页面（只适用于最简单的方式，如果不符合条件，则会回落到 @:SetBase.download.localDownloadMethod.extension ）",
+        "webTip": "打开下载链接对应的页面（只适用于最简单的方式，如果不符合条件，则会回落到 @:SetBase.download.localDownloadMethodOptions.extension ）",
         "browser": "浏览器方法",
         "browserTip": "（推荐）调用浏览器为插件提供的下载方法直接下载",
         "extension": "插件中转",
-        "extensionTip": "插件后台下载种子，并中转到 @:SetBase.download.localDownloadMethod.browser 进行下载"
+        "extensionTip": "插件后台下载种子，并中转到 @:SetBase.download.localDownloadMethodOptions.browser 进行下载"
       },
       "saveDownloadHistory": "是否保存下载历史（如非必要请勿关闭此功能）",
       "localDownloadTitle": "本地下载",
@@ -465,18 +518,21 @@
           "searchPlan": "将被替换为当前搜索方案名称",
           "dateYear": "将被替换为当前年份",
           "dateMonth": "将被替换为当前月份",
-          "dateDay": "将被替换为当前日份"
+          "dateDay": "将被替换为当前日份",
+          "custom": "自定义的内容替换"
         }
       }
     }
   },
   "SetSearchSolution": {
     "solution": "搜索方案",
+    "copy": "基于此搜索方案复制",
     "import": "导入",
     "export": "导出",
     "table": {
       "enable": "启用？",
-      "default": "默认？"
+      "default": "默认？",
+      "autoGenerate": "自动生成"
     },
     "edit": {
       "title": "自定义 @:SetSearchSolution.solution",
@@ -486,6 +542,12 @@
     },
     "delete": {
       "text": "确认删除这 {0} 个 @:SetSearchSolution.solution 吗？"
+    },
+    "spDialog": {
+      "noDefNotice": "该站点未定义搜索模块，请到项目仓库提供帮助！",
+      "notice": "不推荐在此处进行设置，更建议在对应站点的个人设置中配置或使用插件提供的搜索方案功能！",
+      "selectAllNotice": "（注意：在大多数情况下，你并不需要全选所有搜索项！）",
+      "title": "配置站点默认搜索模式 - {name}"
     }
   },
   "SetSite": {
@@ -530,12 +592,6 @@
       "settingNote": ["只有配置过的站点才会显示插件图标及相应的功能；", "已离线的站点不再参与搜索和信息获取；"],
       "oneClickImport": "一键导入站点"
     },
-    "spDialog": {
-      "noDefNotice": "该站点未定义搜索模块，请到项目仓库提供帮助！",
-      "notice": "不推荐在此处进行设置，更建议在对应站点的个人设置中配置或使用插件提供的搜索方案功能！",
-      "selectAllNotice": "（注意：在大多数情况下，你并不需要全选所有搜索项！）",
-      "title": "配置站点默认搜索模式 - {name}"
-    },
     "oneClickImportDialog": {
       "title": "一键导入站点",
       "alert1": "此操作会尝试以默认配置导入你选择的站点，请确保该站点已在浏览器上登录过。导入过程不能中断，请耐心等待。",
@@ -557,7 +613,8 @@
       "name": "名称",
       "backupFields": "备份内容",
       "lastBackupAt": "最近一次备份时间",
-      "notBackup": "未备份"
+      "notBackup": "未备份",
+      "enabled": "启用"
     },
     "localExport": "本地导出",
     "localImport": "本地导入",
@@ -571,17 +628,25 @@
     "enableAutoRefresh": "是否启用后台定时刷新？",
     "autoRefresh": {
       "every": "每隔",
-      "hoursLabel": "小时，自动刷新一次当天",
+      "hoursLabel": "小时自动刷新一次当天",
       "unrefreshedSite": "未刷新过",
       "ofSites": "的站点",
       "retryOnFail": "如果刷新失败，则重试",
       "times": "次，每次间隔",
       "minutes": "分钟。",
       "lastFlushTime": "最近一次刷新时间:",
-      "nextFlushTime": "下一次刷新时间:"
+      "nextFlushTime": "下一次检查时间:"
     },
+    "alwaysPickLastUserInfo": "刷新用户数据时尽可能使用已有的历史信息",
     "showDeadSite": "在概览中展示已被标记为死亡 （isDead） 的站点",
-    "showPassedSite": "在概览中展示已被标记为离线 （isOffline） 或不允许查询用户信息的站点"
+    "showPassedSite": "在概览中展示已被标记为离线 （isOffline） 或不允许查询用户信息的站点",
+    "autoExtendCookies": {
+      "enabled": "是否启用自动延长cookies周期？",
+      "triggerThreshold": "当cookies剩余有效期少于",
+      "extensionDuration": "自动延长其有效期",
+      "weeks": "周，",
+      "months": "个月。"
+    }
   },
   "ptppSettings": {
     "basicConfig": "基本配置",

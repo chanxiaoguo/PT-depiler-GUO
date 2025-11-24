@@ -1,36 +1,18 @@
 import type { TAdvanceSearchKeyword } from "@ptd/site";
 import type { TSiteID } from "./base";
 
-// 种子当前状态
+// 种子当前状态 - 使用字符串字面量枚举支持 i18n
 export enum ETorrentStatus {
-  unknown, // 状态不明
-  downloading, // 正在下载
-  seeding, // 正在做种
-  inactive, // 未活动（曾经下载过，但未完成）
-  completed, // 已完成，未做种， 旧版值 255
+  unknown = "unknown", // 状态不明
+  downloading = "downloading", // 正在下载
+  seeding = "seeding", // 正在做种
+  inactive = "inactive", // 未活动（曾经下载过，但未完成）
+  completed = "completed", // 已完成，未做种， 旧版值 255
 }
 
-// 比较基础的种子 Tag
-export type TBaseTorrentTagName =
-  | "Free" // 免费下载 "blue",
-  | "2xFree" // 免费下载 + 2x 上传 "green",
-  | "2xUp" // 2x 上传   "lime",
-  | "2x50%" // 2x 上传 + 50% 下载 "light-green",
-  | "25%" // 25% 下载 "purple",
-  | "30%" // 30% 下载 "indigo",
-  | "35%" // 35% 下载 "indigo-darken-3",
-  | "50%" // 50% 下载 "orange",
-  | "70%" // 70% 下载 "blue-grey",
-  | "75%" // 75% 下载 "lime-darken-3",
-  | "VIP" // 仅 VIP 可下载 "orange-darken-2",
-  | "H&R" // 需要 H&R "red",
-  | "Excl." // 禁止转载 "deep-orange-darken-1",
-  | string;
-
 export interface ITorrentTag {
-  name: TBaseTorrentTagName;
-  // 标签颜色，如果没定义且 name 是基础标签，则会自动根据基础标签名称进行转换
-  color?: string;
+  name: string;
+  color?: string; // 标签颜色，如果没定义且 name 是基础标签，则会自动根据基础标签名称进行转换
 }
 
 // 作为一个种子最基本应该有的属性

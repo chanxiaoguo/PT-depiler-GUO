@@ -13,6 +13,7 @@ import {
   CTorrentFilterRules,
   CTorrentState,
   TorrentClientStatus,
+  CAddTorrentResult,
 } from "../types";
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 import urlJoin from "url-join";
@@ -299,7 +300,9 @@ export default class QBittorrent extends AbstractBittorrentClient<TorrentClientC
     return this.syncData;
   }
 
-  async addTorrent(url: string, options: Partial<CAddTorrentOptions> = {}): Promise<boolean> {
+  async addTorrent(url: string, options: Partial<CAddTorrentOptions> = {}): Promise<CAddTorrentResult> {
+    const addResult = { success: false } as CAddTorrentResult;
+
     const formData = new FormData();
     const advanceAddTorrentOptions = (options.advanceAddTorrentOptions ?? {}) as Record<
       TQBittorrentAdvanceAddTorrentOptionsKey,
@@ -334,8 +337,11 @@ export default class QBittorrent extends AbstractBittorrentClient<TorrentClientC
     }
 
     if (options.addAtPaused) {
-      // Add torrents in the paused state. Possible values are true, false (default)
+      // 同时发送新旧两个参数，让 qBittorrent 自动选择识别
+      // qBittorrent < 5.1.0 使用 'paused' 参数
       formData.append("paused", options.addAtPaused ? "true" : "false");
+      // qBittorrent 5.1.0+ 使用 'stopped' 参数
+      formData.append("stopped", options.addAtPaused ? "true" : "false");
     }
 
     if (options.uploadSpeedLimit && options.uploadSpeedLimit > 0) {
@@ -354,7 +360,14 @@ export default class QBittorrent extends AbstractBittorrentClient<TorrentClientC
       method: "post",
       data: formData,
     });
-    return res.data === "Ok.";
+
+    addResult.success = res.data === "Ok.";
+    if (!addResult.success) {
+      addResult.message = res.data;
+      return addResult;
+    }
+
+    return addResult;
   }
 
   async getAllTorrents(): Promise<QbittorrentTorrent[]> {

@@ -8,6 +8,7 @@ export const siteMetadata: ISiteMetadata = {
 
   id: "u2",
   name: "U2",
+  aka: ["幼儿园"],
   tags: ["影视", "动漫"],
 
   schema: "NexusPHP",
@@ -141,7 +142,7 @@ export const siteMetadata: ISiteMetadata = {
       {
         requestConfig: { url: "/userdetails.php", responseType: "document" },
         assertion: { id: "params.id" },
-        fields: ["name", "levelName", "uploaded", "downloaded", "bonus", "messageCount", "joinTime"],
+        fields: ["name", "levelName", "uploaded", "downloaded", "bonus", "messageCount", "joinTime", "lastAccessAt"],
       },
       {
         requestConfig: { url: "/mprecent.php", responseType: "document" },

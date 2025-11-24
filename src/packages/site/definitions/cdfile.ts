@@ -1,4 +1,7 @@
-import type { ISiteMetadata } from "../types";
+/**
+ * @JackettDefinitions https://github.com/Jackett/Jackett/blob/master/src/Jackett.Common/Definitions/cdfile.yml
+ */
+import { type ISiteMetadata } from "../types";
 import { CategoryInclbookmarked, CategoryIncldead, CategorySpstate, SchemaMetadata } from "../schemas/NexusPHP";
 
 export const siteMetadata: ISiteMetadata = {
@@ -36,6 +39,11 @@ export const siteMetadata: ISiteMetadata = {
   ],
 
   levelRequirements: [
+    {
+      id: 0,
+      name: "User",
+      privilege: "",
+    },
     {
       id: 1,
       name: "Power User",

@@ -1,3 +1,7 @@
+/**
+ * @JackettDefinitions https://github.com/Jackett/Jackett/blob/master/src/Jackett.Common/Definitions/btschool.yml
+ * @JackettIssue https://github.com/Jackett/Jackett/issues/5761
+ */
 import { ETorrentStatus, type ISiteMetadata } from "../types";
 import { parseSizeString, rot13 } from "../utils";
 import { CategoryInclbookmarked, CategoryIncldead, CategorySpstate, SchemaMetadata } from "../schemas/NexusPHP.ts";
@@ -104,31 +108,13 @@ export const siteMetadata: ISiteMetadata = {
       },
     },
     process: [
-      {
-        requestConfig: { url: "/index.php", params: { _: Date.now() }, responseType: "document" }, // 有助于通过 CF
-        fields: ["id", "name"],
-      },
-      {
-        requestConfig: { url: "/userdetails.php", params: { _: Date.now() }, responseType: "document" },
-        assertion: { id: "params.id" },
-        fields: [
-          "messageCount",
-          "uploaded",
-          "trueUploaded",
-          "downloaded",
-          "trueDownloaded",
-          "levelName",
-          "bonus",
-          "seedingBonus",
-          "joinTime",
-          "seeding",
-          "seedingSize",
-        ],
-      },
-      {
-        requestConfig: { url: "/mybonus.php", params: { _: Date.now() }, responseType: "document" },
-        fields: ["bonusPerHour"],
-      },
+      ...SchemaMetadata.userInfo!.process!.map((item) => ({
+        ...item,
+        requestConfig: {
+          ...item.requestConfig,
+          params: { ...(item.requestConfig?.params || {}), _: Date.now() }, // 请求中增加一个 _ 参数，有助于通过 CF
+        },
+      })),
     ],
   },
 

@@ -1,7 +1,7 @@
 import { filesize } from "filesize";
 import { get } from "es-toolkit/compat";
 import { refDebounced } from "@vueuse/core";
-import { computed, type Ref, ref, unref } from "vue";
+import { computed, type Ref, ref, unref, watch } from "vue";
 import { flatten, flattenDeep, isEqual, uniq, uniqBy } from "es-toolkit";
 import { startOfDay, startOfMonth, startOfQuarter, startOfWeek, startOfYear } from "date-fns";
 import searchQueryParser, { type SearchParserOptions, SearchParserResult } from "search-query-parser";
@@ -9,7 +9,7 @@ import searchQueryParser, { type SearchParserOptions, SearchParserResult } from 
 import { parseSizeString, parseValidTimeString } from "@ptd/site";
 import { formatDate } from "@/options/utils.ts";
 
-type TAdvanceFilterFormat = "date" | "size" | "boolean";
+type TAdvanceFilterFormat = "date" | "size" | "number" | "boolean";
 
 export interface ITextValue {
   required: string[];
@@ -55,6 +55,11 @@ const advanceFilterFormat: Record<TAdvanceFilterFormat, IValueFormat> = {
       else return parseSizeString(value);
     },
     build: (value: string | number) => filesize(value, { spacer: "" }) as string,
+  },
+  // 对 number 全部转为字符串比较
+  number: {
+    parse: (value: string | number) => value.toString(),
+    build: (value: string | number) => value.toString(),
   },
   boolean: {
     parse: (value: string) => (value ? "1" : "0"),
@@ -128,7 +133,12 @@ export function checkKeywordValue(
   // @ts-ignore
 ): boolean | undefined {
   const itemValue = get(rawItem, keyword); // true    filter[keyword] = ['1']
-  if (filter[keyword] && typeof itemValue !== "undefined") {
+  if (filter[keyword]) {
+    // 如果原始数据中没有该 keyword 字段，则直接返回 false
+    if (typeof itemValue == "undefined") {
+      return false;
+    }
+
     const valueFormat = getValueFormat(keyword as string, format);
     if (Array.isArray(itemValue)) {
       const parsedItemValue = itemValue.map((v: any) => valueFormat.parse(v)) as string[];
@@ -163,9 +173,12 @@ interface TableCustomFilterOptions<ItemType> {
 
   format?: TFormat;
 
-  initialSearchValue?: string;
-  initialItems?: Ref<ItemType[]> | ItemType[];
-  debouncedMs?: number;
+  initialSearchValue?: string; // 用于生成 tableWaitFilterRef 的初始数据
+  initialItems?: Ref<ItemType[]> | ItemType[]; // 用于生成 advanceFilterDictRef 的初始数据
+  debouncedMs?: number; // 过滤器字符串更新的防抖时间，单位毫秒
+
+  watchItems?: boolean; // 是否监听 items 的变化（需要传入的为ref），动态更新 advanceFilterDictRef
+  autoUpdateFilter?: boolean; // 是否在 advanceFilterDictRef 变化时自动更新过滤器字符串（需要传入的为ref）
 }
 
 export function useTableCustomFilter<ItemType extends Record<string, any>>(
@@ -178,6 +191,8 @@ export function useTableCustomFilter<ItemType extends Record<string, any>>(
     initialSearchValue = "",
     initialItems = [],
     debouncedMs = 500,
+    watchItems = false,
+    autoUpdateFilter = false,
   } = options;
 
   parseOptions.tokenize = true;
@@ -219,6 +234,10 @@ export function useTableCustomFilter<ItemType extends Record<string, any>>(
   }
 
   resetAdvanceFilterDictFn();
+
+  if (watchItems) {
+    watch(initialItems, () => resetAdvanceFilterDictFn(), { deep: true });
+  }
 
   function toggleKeywordStateFn<T = any>(field: string, value: T) {
     const state = advanceFilterDictRef.value[field].required!.includes(value);
@@ -302,6 +321,16 @@ export function useTableCustomFilter<ItemType extends Record<string, any>>(
 
   function updateTableFilterValueFn() {
     tableWaitFilterRef.value = stringifyFilterFn();
+  }
+
+  if (autoUpdateFilter) {
+    watch(
+      advanceFilterDictRef,
+      () => {
+        updateTableFilterValueFn();
+      },
+      { deep: true },
+    );
   }
 
   return {

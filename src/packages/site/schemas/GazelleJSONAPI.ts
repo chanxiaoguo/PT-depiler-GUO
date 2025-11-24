@@ -3,7 +3,14 @@ import type { AxiosResponse } from "axios";
 
 import PrivateSite from "./AbstractPrivateSite";
 import { parseSizeString, parseTimeWithZone } from "../utils";
-import { EResultParseStatus, type IUserInfo, type ITorrent, type ISiteMetadata, type ISearchInput } from "../types";
+import {
+  EResultParseStatus,
+  type IUserInfo,
+  type ITorrent,
+  type ISiteMetadata,
+  type ISearchInput,
+  NeedLoginError,
+} from "../types";
 
 /**
  * @refs: https://github.com/WhatCD/Gazelle/blob/63b337026d49b5cf63ce4be20fdabdc880112fa3/sections/ajax/index.php#L16
@@ -169,6 +176,10 @@ export interface userJsonResponse extends jsonResponse {
       downloaded: number;
       ratio: string;
       requiredRatio: number;
+      bonusPoints: number | null;
+      bonusPointsPerHour: number | null;
+      bonusSeedingPointsPerHour: number | null;
+      seedingSize: number | null;
     };
     ranks: {
       uploaded: number;
@@ -249,19 +260,39 @@ export const SchemaMetadata: Partial<ISiteMetadata> = {
       levelName: {
         selector: ["response.userstats.class"],
       },
-
-      // "/ajax.php?action=user&id=$user.id$"
+      bonus: {
+        selector: ["response.userstats.bonusPoints"],
+      },
+      bonusPerHour: {
+        selector: ["response.userstats.bonusPointsPerHour", "response.userstats.seedingBonusPointsPerHour"],
+      },
+      seedingSize: {
+        selector: ["response.userstats.seedingSize"], // GazellePW
+      },
       joinTime: {
         selector: ["response.stats.joinedDate"],
         filters: [{ name: "parseTime" }],
       },
+
+      // "/ajax.php?action=user&id=$user.id$"
       seeding: {
         selector: ["response.community.seeding"],
       },
-
-      // "/torrents.php?type=seeding&userid=$user.id$"
-      bonus: {
-        text: "N/A",
+      uploads: {
+        selector: ["response.community.uploaded"],
+      },
+      perfectFlacs: {
+        selector: ["response.community.perfectFlacs"],
+      },
+      groups: {
+        selector: ["response.community.groups"],
+      },
+      invited: {
+        selector: ["response.community.invited"],
+      },
+      lastAccessAt: {
+        selector: ["response.stats.lastAccess"],
+        filters: [{ name: "parseTime" }],
       },
     },
   },
@@ -318,7 +349,7 @@ export default class GazelleJSONAPI extends PrivateSite {
 
   protected async transformGroupTorrent(group: groupBrowseResult, torrent: groupTorrent): Promise<ITorrent> {
     const { authkey, passkey } = await this.getAuthKey();
-    
+
     const tags: { name: string; color: string }[] = [];
     if (torrent.isFreeleech || torrent.isPersonalFreeleech) {
       tags.push({ name: "Free", color: "blue" });
@@ -326,7 +357,7 @@ export default class GazelleJSONAPI extends PrivateSite {
     if (torrent.isNeutralLeech) {
       tags.push({ name: "Neutral", color: "cyan" });
     }
-    
+
     return {
       site: this.metadata.id, // 补全种子的 site 属性
       id: torrent.torrentId,
@@ -337,7 +368,7 @@ export default class GazelleJSONAPI extends PrivateSite {
         (torrent.hasCue ? " / Cue" : "") +
         (torrent.remastered ? ` / ${torrent.remasterYear}` : "") +
         (torrent.remasterTitle ? ` / ${torrent.remasterTitle}` : "") +
-        (torrent.scene ? " / Scene" : "") ,
+        (torrent.scene ? " / Scene" : ""),
       url: `${this.url}torrents.php?id=${group.groupId}&torrentid=${torrent.torrentId}`,
       link: `${this.url}torrents.php?action=download&id=${torrent.torrentId}&authkey=${authkey}&torrent_pass=${passkey}`,
       time: parseTimeWithZone(torrent.time, this.metadata.timezoneOffset),
@@ -394,17 +425,30 @@ export default class GazelleJSONAPI extends PrivateSite {
         flushUserInfo = {
           ...flushUserInfo,
           ...(await this.getUserExtendInfo(flushUserInfo.id as number)),
-          ...(await this.getUserSeedingTorrents(flushUserInfo.id as number)),
         };
+
+        if (!flushUserInfo.seedingSize) {
+          flushUserInfo = {
+            ...flushUserInfo,
+            ...(await this.getSeedingSize(flushUserInfo.id as number)),
+          };
+        }
+
+        // 清理数据
+        flushUserInfo = this.cleanupUserInfo(flushUserInfo);
       }
 
       if (this.metadata.levelRequirements && flushUserInfo.levelName && typeof flushUserInfo.levelId === "undefined") {
         flushUserInfo.levelId = this.guessUserLevelId(flushUserInfo as IUserInfo);
       }
-      
+
       flushUserInfo.status = EResultParseStatus.success;
     } catch (error) {
       flushUserInfo.status = EResultParseStatus.parseError;
+
+      if (error instanceof NeedLoginError) {
+        flushUserInfo.status = EResultParseStatus.needLogin;
+      }
     }
 
     return flushUserInfo;
@@ -421,10 +465,15 @@ export default class GazelleJSONAPI extends PrivateSite {
       "downloaded",
       "ratio",
       "levelName",
+      "bonus",
+      "bonusPerHour",
+      "seedingSize",
     ] as (keyof IUserInfo)[]) as Partial<IUserInfo>;
   }
 
   protected async getUserExtendInfo(userId: number): Promise<Partial<IUserInfo>> {
+    await this.sleepAction(this.metadata.userInfo?.requestDelay);
+
     const { data: apiUser } = await this.requestApi<userJsonResponse>("user", {
       id: userId,
     });
@@ -432,10 +481,31 @@ export default class GazelleJSONAPI extends PrivateSite {
     return this.getFieldsData(apiUser, this.metadata.userInfo!.selectors!, [
       "joinTime",
       "seeding",
+      "uploads",
+      "perfectFlacs",
+      "groups",
+      "invited",
+      "lastAccessAt",
     ] as (keyof Partial<IUserInfo>)[]) as Partial<IUserInfo>;
   }
 
-  protected async getUserSeedingTorrents(userId?: number): Promise<Partial<IUserInfo>> {
+  protected cleanupUserInfo(flushUserInfo: IUserInfo): IUserInfo {
+    if (!flushUserInfo.bonus) {
+      flushUserInfo.bonus = "N/A";
+    }
+    if (!flushUserInfo.bonusPerHour) {
+      flushUserInfo.bonusPerHour = "N/A";
+    }
+    if (!flushUserInfo.perfectFlacs) {
+      delete flushUserInfo["perfectFlacs"];
+    }
+
+    return flushUserInfo;
+  }
+
+  protected async getSeedingSize(userId?: number): Promise<Partial<IUserInfo>> {
+    await this.sleepAction(this.metadata.userInfo?.requestDelay);
+
     const userSeedingTorrent: Partial<IUserInfo> = { seedingSize: 0 };
 
     const { data: seedPage } = await this.request<Document>({
@@ -447,10 +517,6 @@ export default class GazelleJSONAPI extends PrivateSite {
     rows.forEach((element) => {
       userSeedingTorrent.seedingSize! += parseSizeString((element as HTMLElement).innerText.trim());
     });
-
-    if (this.metadata.userInfo?.selectors?.bonus) {
-      userSeedingTorrent.bonus = this.getFieldData(seedPage, this.metadata.userInfo.selectors.bonus);
-    }
 
     return userSeedingTorrent;
   }

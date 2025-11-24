@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
 import { omit } from "es-toolkit";
+import { isEmpty } from "es-toolkit/compat";
 import { computed, ref, shallowRef } from "vue";
 import {
   definitionList,
@@ -16,6 +17,7 @@ import {
 import { sendMessage } from "@/messages.ts";
 import { useMetadataStore } from "@/options/stores/metadata.ts";
 import { useRuntimeStore } from "@/options/stores/runtime.ts";
+import { useConfigStore } from "@/options/stores/config.ts";
 import type { IPtppDumpUserInfo, IPtppUserInfo, TUserInfoStorageSchema } from "@/shared/types.ts";
 
 import SiteName from "@/options/components/SiteName.vue";
@@ -28,6 +30,7 @@ const { ptppUserData } = defineProps<{
 }>();
 
 const { t } = useI18n();
+const configStore = useConfigStore();
 const metadataStore = useMetadataStore();
 const runtimeStore = useRuntimeStore();
 
@@ -49,7 +52,7 @@ const userInfoTransferMap = {
   totalTraffic: { key: "totalTraffic", format: parsePtppSize },
   // seedingList?: string[]; // 做种列表
   seedingPoints: "seedingBonus",
-  averageSeedtime: "averageSeedtime",
+  averageSeedtime: "averageSeedingTime",
   // totalSeedtime?: number; // 总保种时间
   bonusPage: false,
   unsatisfiedsPage: false,
@@ -140,10 +143,23 @@ function transferUserInfo(userInfo: IPtppUserInfo) {
 }
 
 async function doImport() {
+  if (isEmpty(metadataStore.sites)) {
+    if (!confirm("你似乎还没有添加任何站点，这可能导致导入异常，是否继续？")) {
+      runtimeStore.showSnakebar("导入操作已取消。", { color: "warning" });
+      return;
+    }
+  }
+
   isImporting.value = true;
+
+  // 暂停后端刷新数据的任务
+  const autoReflushStatus = configStore.userInfo.autoReflush.enabled;
+
   try {
-    // 暂停后端刷新数据的任务
-    await sendMessage("cleanupFlushUserInfoJob", undefined);
+    if (autoReflushStatus) {
+      configStore.userInfo.autoReflush.enabled = false;
+      await configStore.$save();
+    }
 
     // 读出目前所有的 userInfo
     const userInfoStorage = ((await sendMessage("getExtStorage", "userInfo")) as TUserInfoStorageSchema) ?? {};
@@ -183,7 +199,10 @@ async function doImport() {
     console.error("导入失败", e);
     runtimeStore.showSnakebar("导入失败。", { color: "error" });
   } finally {
-    await sendMessage("setFlushUserInfoJob", undefined);
+    // 恢复自动刷新的状态
+    configStore.userInfo.autoReflush.enabled = autoReflushStatus;
+    await configStore.$save();
+
     isImporting.value = false;
   }
 }

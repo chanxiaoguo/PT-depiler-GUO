@@ -1,4 +1,7 @@
-import { type ISiteMetadata } from "../types";
+/**
+ * @JackettDefinitions https://github.com/Jackett/Jackett/blob/master/src/Jackett.Common/Definitions/chdbits.yml
+ */
+import { ETorrentStatus, type ISiteMetadata } from "../types";
 import { SchemaMetadata } from "../schemas/NexusPHP";
 
 export const siteMetadata: ISiteMetadata = {
@@ -7,6 +10,7 @@ export const siteMetadata: ISiteMetadata = {
   version: 1,
   id: "chdbits",
   name: "CHDBits",
+  aka: ["彩虹岛", "CHD"],
   description: "彩虹岛",
   tags: ["影视", "综合"],
   collaborator: ["zxb0303"],
@@ -143,6 +147,58 @@ export const siteMetadata: ISiteMetadata = {
     },
   ],
 
+  search: {
+    ...SchemaMetadata.search,
+    selectors: {
+      ...SchemaMetadata.search!.selectors,
+      progress: {
+        selector: ["td.rowfollow:last"],
+        elementProcess: (element: HTMLElement) => {
+          const text = element.textContent?.trim() || "";
+          // 如果是"--"表示未知
+          if (text === "--") {
+            return 0;
+          }
+          const percentMatch = text.match(/(\d+)%/);
+          return percentMatch ? parseInt(percentMatch[1]) : 0;
+        },
+      },
+      status: {
+        selector: ["td.rowfollow:last"],
+        elementProcess: (element: HTMLElement) => {
+          const text = element.textContent?.trim() || "";
+          const style = element.getAttribute("style");
+
+          // 如果是"--"表示未知状态
+          if (text === "--") {
+            return ETorrentStatus.unknown;
+          }
+
+          // 检查是否包含百分比
+          const percentMatch = text.match(/(\d+)%/);
+          if (!percentMatch) {
+            return ETorrentStatus.unknown;
+          }
+
+          const percentage = parseInt(percentMatch[1]);
+          if (style) {
+            if (percentage === 100) {
+              return ETorrentStatus.seeding;
+            } else {
+              return ETorrentStatus.downloading;
+            }
+          } else {
+            if (percentage === 100) {
+              return ETorrentStatus.completed;
+            } else {
+              return ETorrentStatus.inactive;
+            }
+          }
+        },
+      },
+    },
+  },
+
   levelRequirements: [
     {
       id: 1,
@@ -203,7 +259,8 @@ export const siteMetadata: ISiteMetadata = {
       downloaded: "2TB",
       ratio: 7.0,
       bonus: 2200000,
-      privilege: "首次升级赠送邀请1枚，可以更新过期的外部信息；可以查看Extreme User论坛。",
+      privilege:
+        "首次升级赠送邀请1枚，可以更新过期的外部信息；可以查看Extreme User论坛。Extreme User及以上等级用户封存账号（在控制面板）后不会被删除账号。",
     },
     {
       id: 8,
@@ -212,7 +269,7 @@ export const siteMetadata: ISiteMetadata = {
       downloaded: "3TB",
       ratio: 8.0,
       bonus: 3500000,
-      privilege: "首次升级赠送邀请2枚，保留帐号，在官方活动期间可发放邀请；",
+      privilege: "首次升级赠送邀请2枚，保留帐号，在官方活动期间可发放邀请；Ultimate User及以上等级用户会永远保留；",
     },
     {
       id: 9,

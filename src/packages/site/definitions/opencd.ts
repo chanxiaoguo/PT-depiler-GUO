@@ -1,5 +1,10 @@
-import { ETorrentStatus, type IElementQuery, type ISiteMetadata } from "../types";
-import { CategoryInclbookmarked, CategoryIncldead, CategorySpstate, SchemaMetadata } from "../schemas/NexusPHP.ts";
+import { ETorrentStatus, type IElementQuery, type ITorrent, type ISiteMetadata } from "../types";
+import NexusPHP, {
+  CategoryInclbookmarked,
+  CategoryIncldead,
+  CategorySpstate,
+  SchemaMetadata,
+} from "../schemas/NexusPHP.ts";
 
 // OpenCD 中的部分选择器和处理方法被其他站公用
 export const selectorSearchProgress: IElementQuery = {
@@ -30,6 +35,7 @@ export const siteMetadata: ISiteMetadata = {
   version: 1,
   id: "opencd",
   name: "OpenCD",
+  aka: ["皇后"],
   description: "皇后，专一的音乐类PT站，是目前国内最大的无损音乐PT",
   tags: ["音乐"],
 
@@ -237,20 +243,64 @@ export const siteMetadata: ISiteMetadata = {
       status: selectorSearchStatus,
       tags: [
         ...SchemaMetadata.search!.selectors!.tags!,
+        { name: "H&R", selector: "*", color: "red" },
         { selector: "img[src*='pic/share_rule_1.gif']", name: "Excl.", color: "deep-orange-darken-1" }, // 禁转
       ],
+    },
+  },
+
+  detail: {
+    // 该站详情页为 /plugin_details.php?id=数字
+    urlPattern: ["/plugin_details.php"],
+
+    selectors: {
+      id: {
+        selector: ":self",
+        elementProcess: (element: Document) => {
+          // 从 URL 中获取 ID，例如 /plugin_details.php?id=179082
+          const url = element.URL;
+          const idMatch = url.match(/id=(\d+)/);
+          if (idMatch && idMatch.length >= 2) {
+            return idMatch[1];
+          }
+          return undefined;
+        },
+      },
+      title: {
+        // 音乐站title不适合作为搜索词
+        selector: 'td.rowtitle:contains("專輯名稱：") + td',
+        attr: "title",
+      },
+      link: {
+        selector: ['a[href*="download.php?id="][href*="&passkey="]'],
+        attr: "href",
+      },
+    },
+  },
+
+  userInfo: {
+    ...SchemaMetadata.userInfo!,
+    selectors: {
+      ...SchemaMetadata.userInfo!.selectors!,
+      hnrUnsatisfied: {
+        text: 0,
+        selector: ["td.rowfollow > a[href*='torrents.php?option-torrents=8']"],
+        filters: [{ name: "parseNumber" }],
+      },
     },
   },
 
   levelRequirements: [
     {
       id: 1,
-      name: "採女-正八品(User)",
+      name: "User",
+      nameAka: ["採女-正八品"],
       privilege: `新用户的默认级别；可以查看NFO/LOG文档。`,
     },
     {
       id: 2,
-      name: "常在-正七品(Power User)",
+      name: "Power User",
+      nameAka: ["常在-正七品"],
       interval: "P5W",
       ratio: 1.5,
       alternative: [{ downloaded: "20GB" }, { uploads: 5 }],
@@ -259,7 +309,8 @@ export const siteMetadata: ISiteMetadata = {
     },
     {
       id: 3,
-      name: "贵人-正六品(Elite User)",
+      name: "Elite User",
+      nameAka: ["贵人-正六品"],
       interval: "P10W",
       ratio: 2.0,
       alternative: [{ downloaded: "60GB" }, { uploads: 20 }],
@@ -268,7 +319,8 @@ export const siteMetadata: ISiteMetadata = {
     },
     {
       id: 4,
-      name: "良媛-正五品(Crazy User)",
+      name: "Crazy User",
+      nameAka: ["良媛-正五品"],
       interval: "P15W",
       ratio: 2.5,
       alternative: [{ downloaded: "200GB" }, { uploads: 50 }],
@@ -276,7 +328,8 @@ export const siteMetadata: ISiteMetadata = {
     },
     {
       id: 5,
-      name: "容华-正四品(Insane User)",
+      name: "Insane User",
+      nameAka: ["容华-正四品"],
       interval: "P20W",
       ratio: 3.0,
       alternative: [{ downloaded: "400GB" }, { uploads: 100 }],
@@ -284,7 +337,8 @@ export const siteMetadata: ISiteMetadata = {
     },
     {
       id: 6,
-      name: "贵嫔-正三品(Veteran User)",
+      name: "Veteran User",
+      nameAka: ["贵嫔-正三品"],
       interval: "P25W",
       ratio: 3.5,
       alternative: [{ downloaded: "600GB" }, { uploads: 200 }],
@@ -293,7 +347,8 @@ export const siteMetadata: ISiteMetadata = {
     },
     {
       id: 7,
-      name: "淑仪-正二品(Extreme User)",
+      name: "Extreme User",
+      nameAka: ["淑仪-正二品"],
       interval: "P25W",
       ratio: 4.0,
       alternative: [{ downloaded: "1TB" }, { uploads: 300 }],
@@ -301,7 +356,8 @@ export const siteMetadata: ISiteMetadata = {
     },
     {
       id: 8,
-      name: "贵妃-正一品(Ultimate User)",
+      name: "Ultimate User",
+      nameAka: ["贵妃-正一品"],
       interval: "P30W",
       ratio: 4.5,
       alternative: [{ downloaded: "2TB" }, { uploads: 450 }],
@@ -309,16 +365,32 @@ export const siteMetadata: ISiteMetadata = {
     },
     {
       id: 9,
-      name: "皇后(Nexus Master)",
+      name: "Nexus Master",
+      nameAka: ["皇后"],
       interval: "P30W",
       ratio: 5.0,
       alternative: [{ downloaded: "3TB" }, { uploads: 600 }],
       privilege: "得到十个邀请名额。",
     },
-    {
-      id: 100,
-      name: "貴賓(VIP)",
-      groupType: "vip",
-    },
+    { id: 100, name: "貴賓(VIP)", groupType: "vip" },
+    { id: 101, name: "養老族", nameAka: ["养老族"], groupType: "vip" },
+    { id: 201, name: "保種員", nameAka: ["保种员"], groupType: "manager" },
+    { id: 202, name: "發布員", nameAka: ["发布员"], groupType: "manager" },
+    { id: 203, name: "工作人員", groupType: "manager" },
+    { id: 204, name: "管理员", groupType: "manager" },
+    { id: 205, name: "論壇版主", nameAka: ["论坛版主"], groupType: "manager" },
+    { id: 206, name: "總版主", nameAka: ["总版主"], groupType: "manager" },
+    { id: 207, name: "維護開发員", groupType: "manager" },
   ],
 };
+
+export default class OpenCD extends NexusPHP {
+  public override async getTorrentDownloadLink(torrent: ITorrent): Promise<string> {
+    // 对 OpenCD 站点，种子详情页为 /plugin_details.php?id=123 的形式
+    if (torrent.link && torrent.link.includes("/plugin_details.php")) {
+      return torrent.link.replace(/plugin_details\.php\?id=(\d+)/, "download.php?id=$1").replace(/&hit=1/, ""); // hit=1 是为了统计下载次数
+    }
+
+    return super.getTorrentDownloadLink(torrent);
+  }
+}

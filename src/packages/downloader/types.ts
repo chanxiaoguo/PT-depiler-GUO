@@ -168,7 +168,7 @@ export interface CAddTorrentOptions {
   /**
    * 是否本地下载
    */
-  localDownload: boolean;
+  localDownload?: boolean;
   localDownloadOption?: AxiosRequestConfig;
 
   /**
@@ -208,6 +208,12 @@ export interface CAddTorrentOptions {
    * 推送下载时，该下载器的一些专有设置
    */
   advanceAddTorrentOptions?: Record<string, any>;
+}
+
+export interface CAddTorrentResult {
+  success: boolean; // 是否添加成功
+  message?: any; // 错误信息
+  id?: string; // 添加成功后返回的种子ID
 }
 
 /**
@@ -299,7 +305,7 @@ export abstract class AbstractBittorrentClient<T extends DownloaderBaseConfig = 
   }
 
   // 添加种子
-  public abstract addTorrent(url: string, options: Partial<CAddTorrentOptions>): Promise<boolean>;
+  public abstract addTorrent(url: string, options: Partial<CAddTorrentOptions>): Promise<CAddTorrentResult>;
 
   // 暂停种子
   public abstract pauseTorrent(id: any): Promise<boolean>;

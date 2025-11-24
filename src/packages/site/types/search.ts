@@ -3,8 +3,9 @@
 import type { AxiosRequestConfig } from "axios";
 import type { TSupportSocialSite$1 } from "@ptd/social";
 import type { EResultParseStatus } from "./base";
-import type { ITorrent, TBaseTorrentTagName } from "./torrent";
+import type { ITorrent } from "./torrent";
 import type { TQueryFilter } from "../utils/filter";
+import type { TPreDefinedTorrentTagName } from "../utils/tags";
 
 export type TAdvanceSearchKeyword = TSupportSocialSite$1 | string;
 
@@ -43,6 +44,11 @@ export interface IBaseSearchConfig {
   requestConfig?: Partial<AxiosRequestConfig>;
 
   /**
+   * 是否在搜索发送请求前延迟一段时间，单位为毫秒
+   */
+  requestDelay?: number;
+
+  /**
    * 定义在正式开始请求前，对合并后的 AxiosRequestConfig 如何处理
    * 一般情况下，此项用于调试，如： (config) => {console.log(config); return config;}
    *
@@ -50,6 +56,36 @@ export interface IBaseSearchConfig {
    * @param filter 原始搜索条件，注意此处的 keywords 已经被去除了前缀 `${advanceKeywordType}|`
    */
   requestConfigTransformer?: TSearchRequestConfigTransformer;
+
+  /**
+   * 字符集支持配置
+   *
+   * 如果设置为 true，当搜索查询包含非拉丁字符（如中文、日文、阿拉伯文、西里尔文等）时，
+   * 该站点将被跳过，不会发送搜索请求。这有助于提高搜索效率，避免向不支持非拉丁字符的站点发送无效请求。
+   *
+   * 如果设置为 false 或未设置（默认），该站点将支持所有字符集的搜索，
+   * 无论搜索查询包含拉丁字符还是非拉丁字符。
+   *
+   * 注意：
+   * - 混合字符查询（同时包含拉丁和非拉丁字符）会被视为非拉丁搜索
+   * - 数字、标点符号和空格被视为字符集中性，不影响字符集检测
+   * - 此配置仅影响搜索请求的发送，不影响站点的其他功能
+   *
+   * @default false - 支持所有字符集
+   */
+  skipNonLatinCharacters?: boolean;
+
+  /**
+   * 是否跳过仅包含空白字符的搜索查询（如空格、制表符、换行符等）
+   * 如果设置为 true，当搜索查询仅包含空白字符时，该站点将被跳过，不会发送搜索请求。
+   * 这有助于避免向站点发送无效或无意义的搜索请求，提高搜索效率。
+   *
+   * 如果设置为 false 或未设置（默认），该站点将接受所有搜索查询，
+   * 包括仅包含空白字符的查询。
+   *
+   * @default false - 不跳过仅包含空白字符的查询
+   */
+  skipWhiteSpacePlaceholder?: boolean;
 }
 
 export interface IAdvanceKeywordSearchConfig extends IBaseSearchConfig {
@@ -69,7 +105,7 @@ export interface ISearchConfig extends IBaseSearchConfig {
    *  - douban|35131346
    *
    * 注意：1. 我们断言高级搜索词的内容是单一的，即不会出现多个高级搜索词{或,和}普通搜索词 同时出现的情况
-   *      2. 高级搜索词需要明确声明，如未声明则相当于搜索 普通搜索词
+   *      2. 高级搜索词如果是 imdb，如果此处未声明，则会视同 { enabled: true }， 其他则默认为 { enabled: false }
    */
   advanceKeywordParams?: Record<
     TAdvanceSearchKeyword,
@@ -84,7 +120,7 @@ export interface ISearchConfig extends IBaseSearchConfig {
      *  - merge  用于合并部分使用多行表示一个种子的情况，仅在返回为 Document 时生效
      */
     rows?: {
-      selector: string | ":self";
+      selector: string | ":self" | string[];
       filter?: <T>(rows: T) => T;
       merge?: number;
     };
@@ -98,7 +134,7 @@ export interface ISearchConfig extends IBaseSearchConfig {
      * 对于种子的 tags 属性，如果对应 selector 存在，则认为对应tag存在
      */
     tags?: {
-      name: TBaseTorrentTagName;
+      name: string | TPreDefinedTorrentTagName;
       selector: string;
       color?: string;
     }[];

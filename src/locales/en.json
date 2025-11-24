@@ -43,7 +43,9 @@
     "test": "Test",
     "visit": "Visit",
     "version": "Version",
-    "howToUse": "How To Use"
+    "howToUse": "How To Use",
+    "import": "Import",
+    "export": "Export"
   },
   "layout": {
     "header": {
@@ -52,6 +54,7 @@
       "navBarTip": "Click to show/hide the navigation bar",
       "searchPlan": {
         "all": "@:manifest.searchPlanAll",
+        "singleSite": "@:manifest.searchPlanSingleSite",
         "default": "@:manifest.searchPlanDefault"
       },
       "searchTip": "Input keyword, IMDb numbers to search",
@@ -64,8 +67,20 @@
     "extDesc": "PT Depiler",
     "extName": "PT Depiler",
     "searchPlanAll": "All Sites",
+    "searchPlanSingleSite": "Single Site",
     "searchPlanDefault": "Default",
-    "omniboxSearch": "Search $2 in [ $1 ]"
+    "omniboxSearch": "Search $2 in [ $1 ]",
+    "contextMenuSearch": "Using PT Depiler to Search for \"%s\" related torrents",
+    "contextMenuSearchInDefault": "Search in the default plan",
+    "contextMenuSearchInSolution": "Search in the specified plan",
+    "contextMenuSearchInSite": "Search in the specified site",
+    "contextMenuSearchInThisSite": "Search in this site",
+    "contextMenuSendToDownloader": "Using PT Depiler to Download link",
+    "contextMenuSendToDownloaderAdvanced": "Advanced push",
+    "contextMenuSendToDownloaderIn": "Push to $1 -> $2",
+    "contextMenuSendToDownloaderDefaultFolder": "Default path",
+    "notificationSendLinkToDownloaderSuccess": "Successfully sent the link to the downloader [$1]",
+    "notificationSendLinkToDownloaderFailure": "Failed to send the link to the downloader [$1]"
   },
   "route": {
     "About": {
@@ -97,18 +112,7 @@
       "SetDownloader": "Download Server",
       "SetMediaServer": "Media Server",
       "SetSearchSolution": "Search Solution",
-      "SetSite": "Sites",
-      "SearchConfig": {
-        "siteSearchConfig": "Site Search Configuration",
-        "siteQueueConcurrency": "Request Queue Concurrency",
-        "saveLastSearchFilter": "Save last used search filter",
-        "mediaServerSearchConfig": "Media Server Search Configuration",
-        "mediaQueueConcurrency": "Request Queue Concurrency",
-        "mediaSearchLimit": "Number of search results per request",
-        "mediaSearchLimitMessage": "Please do not load too many search results at once. It's not optimized with virtual-scroll, which may cause the browser to freeze and affect the performance of the media server.",
-        "autoLoadInitialMediaWall": "Automatically load the initial media wall",
-        "autoLoadMoreMediaOnScroll": "Automatically load more media when scrolling to the bottom of the page"
-      }
+      "SetSite": "Sites"
     }
   },
   "checkSwitch": {
@@ -137,14 +141,16 @@
     "seedingSize": "Seeding Size",
     "seedingTime": "Seeding Time",
     "averageSeedingTime": "Average Seeding Time",
-    "bonus": "Karma Points",
+    "bonus": "Bonus",
     "seedingBonus": "Seed Points",
     "bonusPerHour": "Bonus Gained Per Hour",
     "uploads": "Uploaded Torrents",
     "leeching": "Leeching Torrents",
     "snatches": "Completed Torrents",
     "posts": "Posted Threads",
-    "hnrUnsatisfied": "Unsatisfied H&R Count"
+    "hnrPreWarning": "PreWarning H&R Count",
+    "hnrUnsatisfied": "Unsatisfied H&R Count",
+    "adoptions": "Adopted Torrents"
   },
   "resultParseStatus": {
     "unknownError": "Unknown Error!",
@@ -153,6 +159,8 @@
     "success": "Fetch Successful!",
     "parseError": "Parse Error!",
     "passParse": "Not Enabled!",
+    "CFBlocked": "Cloudflare Error!",
+    "CFBlockedNotes": "It may be because the site has enabled CloudFlare's security protection, which makes it impossible to retrieve data. You can first try to manually access the site once to pass the verification. If that doesn't work, just wait for the site to recover on its own.",
     "needLogin": "Login Required!",
     "noResults": "No Results!",
     "unknown": "Unknown Status!"
@@ -189,15 +197,25 @@
       "status": "Download Status"
     }
   },
+  "torrent": {
+    "status": {
+      "unknown": "Unknown",
+      "downloading": "Downloading",
+      "seeding": "Seeding",
+      "inactive": "Inactive",
+      "completed": "Completed"
+    }
+  },
   "MediaServerEntity": {
     "searchPlaceholder": "Search term",
-    "detail": "Details"
+    "detail": "Details",
+    "loadMore": "Load More",
+    "noItems": "No Items, use Search Input or Load More Button to Load"
   },
   "MyData": {
     "index": {
       "flushSelectSite": "Flush selected",
       "flushCancel": "Flush canceled",
-      "tableFontSize": "Table Font Size",
       "joinTimeFormat": "Display join time",
       "joinTimeFormatOptions": {
         "alive": "Relative Time",
@@ -215,6 +233,9 @@
       "showHnR": "Show H&R",
       "showSeedingBonus": "Show Seeding Bonus",
       "updateAtFormatAsAlive": "Display update At as Relative Time",
+      "showIntervalAsDate": "Display level requirement time as date format",
+      "simplifyBonusNumbers": "Simplify Bonus Numbers",
+      "showBonusNeededInterval": "Show estimated bonus time in level requirements",
       "multiOpen": "Open in batch",
       "viewTimeline": "Timeline",
       "viewStatistic": "Data Chart",
@@ -233,7 +254,10 @@
       "levelName": "Level",
       "userData": "Data",
       "trueUserData": "True Data",
+      "invites": "Invites",
       "joinTime": "Join Time",
+      "lastAccessAt": "Last Access At",
+      "lastAccessDurationNote": "Not Access for {0} days",
       "updateAt": "Updated At",
       "action": {
         "viewHistoryData": "View History Data",
@@ -278,6 +302,7 @@
       "downloaded": "DL Size",
       "seeding": "Seeding",
       "seedingSize": "SD Size",
+      "bonus": "Bonus",
       "bonusPerHour": "Bonus/H",
       "ratio": "Ratio",
       "siteName": "Site Name",
@@ -301,9 +326,10 @@
       },
       "alert": {
         "enterKeyword": "Please enter keywords to start searching",
-        "statusButton": "Search Status",
+        "searchStatus": "Search Status",
         "paused": "Search paused...",
         "searching": "Searching...",
+        "searchProgress": "Received {0} results, search is still in progress...",
         "snapshot": "Search Snapshot",
         "plan": "Search Plan",
         "keyword": "Keyword",
@@ -314,15 +340,21 @@
         "start": "Start search queue",
         "pause": "Pause search queue",
         "cancel": "Cancel current waiting search",
-        "retry": "Retry Search"
+        "retry": "Retry Search",
+        "retryFailed": "Retry the failed search plans (such as @:resultParseStatus.unknownError, @:resultParseStatus.parseError, @:resultParseStatus.CFBlocked, @:resultParseStatus.needLogin)",
+        "saveSnapshot": "Save Search Snapshot"
       },
       "filterLabel": "Filter search results",
+      "selectedTorrents": "Selected {0} torrents",
       "showSiteName": "Show Site Name",
       "showTorrentTag": "Show Torrent Tags",
       "showTorrentSubtitle": "Show Torrent Subtitle",
       "showSocialInformation": "Show Media Rating Information",
       "socialInformationSearchOnNewTab": "Open Media Rating Search in a New Tab",
       "uploadAtFormatAsAlive": "Display Upload Time as Relative Time"
+    },
+    "siteFilter": {
+      "all": "All Site"
     },
     "AdvanceFilterGenerateDialog": {
       "date": {
@@ -365,16 +397,37 @@
         "dark": "Dark Mode",
         "index": "UI display mode",
         "light": "Light Mode"
-      }
+      },
+      "socialSiteSearchBy": {
+        "id": "Search by ID",
+        "title": "Search by Main Title",
+        "imdb": "Search by IMDb Number",
+        "chosen": "Let me choose"
+      },
+      "tableMultiSortNote": "Multi-column sorting: Click any table header field to start sorting, which will display the number \\\"1\\\" on the field. Click other fields sequentially to display \\\"2\\\", \\\"3\\\", indicating sorting priority. Click the same field again to toggle between ascending, descending, or cancel sorting. The sorting order is determined by these numbers, with smaller numbers having higher priority."
+    },
+    "searchEntity": {
+      "siteSearchConfig": "Site Search Configuration",
+      "siteQueueConcurrency": "Request Queue Concurrency",
+      "saveLastSearchFilter": "Save last used search filter",
+      "forceImdbIdMatchFilter": "When searching by IMDb, filter out results whose IMDb ID returned by the site does not match",
+      "quickSiteFilter": "Quick Site Filter In Search Page",
+      "mediaServerSearchConfig": "Media Server Search Configuration",
+      "mediaQueueConcurrency": "Request Queue Concurrency",
+      "mediaSearchLimit": "Number of search results per request",
+      "mediaSearchLimitMessage": "Please do not load too many search results at once. It's not optimized with virtual-scroll, which may cause the browser to freeze and affect the performance of the media server.",
+      "autoLoadInitialMediaWall": "Automatically load the initial media wall",
+      "autoLoadMoreMediaOnScroll": "Automatically load more media when scrolling to the bottom of the page"
     },
     "download": {
-      "localDownloadMethod": {
+      "localDownloadMethod": "Local Download Method",
+      "localDownloadMethodOptions": {
         "web": "Web Page",
-        "webTip": "Open the page corresponding to the download link (only applicable to the simplest method; if conditions are not met, it will fall back to @:SetBase.download.localDownloadMethod.extension )",
+        "webTip": "Open the page corresponding to the download link (only applicable to the simplest method; if conditions are not met, it will fall back to @:SetBase.download.localDownloadMethodOptions.extension )",
         "browser": "Browser Method",
         "browserTip": "(RECOMMEND) Use the browser's download method provided by the extension to download directly",
         "extension": "Extension Proxy",
-        "extensionTip": "The extension downloads the torrent in the background and proxies it to @:SetBase.download.localDownloadMethod.browser for downloading"
+        "extensionTip": "The extension downloads the torrent in the background and proxies it to @:SetBase.download.localDownloadMethodOptions.browser for downloading"
       },
       "saveDownloadHistory": "Save download history (Please do not disable this function unless necessary)",
       "localDownloadTitle": "Local Download",
@@ -465,7 +518,8 @@
           "searchPlan": "Search Plan Name",
           "dateYear": "current year",
           "dateMonth": "current month",
-          "dateDay": "current day"
+          "dateDay": "current day",
+          "custom": "Custom text"
         }
       }
     }
@@ -476,7 +530,8 @@
     "export": "Export",
     "table": {
       "enable": "Enabled ?",
-      "default": "Default ?"
+      "default": "Default ?",
+      "autoGenerate": "Auto Generate"
     },
     "edit": {
       "title": "Customize @:SetSearchSolution.solution",
@@ -486,6 +541,12 @@
     },
     "delete": {
       "text": "Are you sure to delete these {0} @:SetSearchSolution.solution ?"
+    },
+    "spDialog": {
+      "noDefNotice": "This site does not define any search categories, please go to help!",
+      "notice": "It is not recommended to set it here, and it is recommended to configure your user CP in site or use search solution",
+      "selectAllNotice": "(Notice: In most cases, you don't need to select all search terms! )",
+      "title": "Set default search params for Site {name}"
     }
   },
   "SetSite": {
@@ -533,12 +594,6 @@
       ],
       "oneClickImport": "One-Click Import Sites"
     },
-    "spDialog": {
-      "noDefNotice": "This site does not define any search categories, please go to help!",
-      "notice": "It is not recommended to set it here, and it is recommended to configure your user CP in site or use search solution",
-      "selectAllNotice": "(Notice: In most cases, you don't need to select all search terms! )",
-      "title": "Set default search params for Site {name}"
-    },
     "oneClickImportDialog": {
       "title": "One-Click Import Sites",
       "alert1": "This operation will attempt to import the sites you select with default configurations. Please ensure you have logged into these sites in your browser. The import process cannot be interrupted, please wait patiently.",
@@ -560,7 +615,8 @@
       "name": "Name",
       "backupFields": "Backup Content",
       "lastBackupAt": "Last Backup Time",
-      "notBackup": "Not Backed Up"
+      "notBackup": "Not Backed Up",
+      "enabled": "Enabled"
     },
     "localExport": "Local Export",
     "localImport": "Local Import",
@@ -574,17 +630,25 @@
     "enableAutoRefresh": "Enable background auto-refresh?",
     "autoRefresh": {
       "every": "Every",
-      "hoursLabel": "hours, auto-refresh today's",
+      "hoursLabel": "hours auto-refresh today's",
       "unrefreshedSite": "unrefreshed",
-      "ofSites": "sites",
+      "ofSites": "sites.",
       "retryOnFail": "If refresh fails, retry",
       "times": "times, with an interval of",
       "minutes": "minutes.",
       "lastFlushTime": "Last refresh time:",
-      "nextFlushTime": "Next refresh time:"
+      "nextFlushTime": "Next refresh check time:"
     },
+    "alwaysPickLastUserInfo": "",
     "showDeadSite": "Show sites marked as dead (isDead) in the overview",
-    "showPassedSite": "Show sites marked as offline (isOffline) or not allowing user info query in the overview"
+    "showPassedSite": "Show sites marked as offline (isOffline) or not allowing user info query in the overview",
+    "autoExtendCookies": {
+      "enabled": "Enable auto-extend cookies period?",
+      "triggerThreshold": "Trigger threshold for extension",
+      "extensionDuration": "Extension duration",
+      "weeks": "weeks,",
+      "months": "months."
+    }
   },
   "ptppSettings": {
     "basicConfig": "Basic Configuration",

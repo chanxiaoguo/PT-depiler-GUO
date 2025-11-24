@@ -8,6 +8,7 @@
     <img src="https://img.shields.io/badge/Used-TypeScript%20Vue-blue.svg">
     <a href="./LICENSE" title="GitHub license"><img src="https://img.shields.io/github/license/pt-plugins/PT-depiler.svg?label=License" alt="GitHub license"/></a>
     <a href="https://t.me/joinchat/NZ9NCxPKXyby8f35rn_QTw"><img src="https://img.shields.io/badge/Telegram-Chat-blue.svg?logo=telegram" alt="Telegram"/></a>
+    <a href="https://deepwiki.com/pt-plugins/PT-depiler"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"/></a>
 </p>
 
 ### 🚀 关于 Introduction
@@ -31,6 +32,8 @@ PT-depiler 是在原 [PT-Plugin-Plus](https://github.com/pt-plugins/PT-Plugin-Pl
 ### 🔧 安装 Installation
 
 #### 1. 从各个浏览器的扩展商店安装
+
+在各主流浏览器的扩展商店中均已上架 PT-Depiler，您可以直接前往对应的扩展商店搜索 "PT-Depiler" 进行安装，或点击表格状态列的徽标图片直接跳转到对应的扩展商店页面进行安装。
 
 |          浏览器           | 状态                                                                                                                                                                                                                                                                                                                                |
 |:----------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -75,11 +78,17 @@ PT-Depiler 并不是对 PT-Plugin-Plus 的简单移植，而是对其进行了�
 
 我们还有一个 [help wanted](../../labels/%22help%20wanted%22) 的问题列表，您可能会感兴趣。
 
+![Alt](https://repobeats.axiom.co/api/embed/9d98187b3a4c57e8c3a7087ff45d61bc03741af0.svg "Repobeats analytics image")
+
 ### 📝 许可证 License
 
 PT-Depiler 是一个开源项目，遵循 [MIT 许可证](http://opensource.org/licenses/MIT)
 
 Copyright (c) 2020-present [pt-plugins](https://github.com/pt-plugins)
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=pt-plugins/PT-depiler&type=Date)](https://www.star-history.com/#pt-plugins/PT-depiler&Date)
 
 --------------
 

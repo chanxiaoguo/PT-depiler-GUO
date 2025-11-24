@@ -10,6 +10,7 @@ import {
   ITorrent,
   ITorrentTag,
   TSchemaMetadataListSelectors,
+  ETorrentStatus,
 } from "../types";
 import PrivateSite from "../schemas/AbstractPrivateSite.ts";
 
@@ -145,7 +146,7 @@ export const siteMetadata: ISiteMetadata = {
   version: 1,
   id: "mteam",
   name: "M-Team - TP",
-  aka: ["MTeam"],
+  aka: ["MTeam", "馒头"],
   description: "综合性网站，有分享率要求",
   tags: ["影视", "综合", "成人"],
   timezoneOffset: "+0800",
@@ -155,7 +156,14 @@ export const siteMetadata: ISiteMetadata = {
   type: "private",
   schema: "mTorrent",
 
-  urls: ["uggcf://xc.z-grnz.pp/", "uggcf://mc.z-grnz.vb/", "uggcf://kc.z-grnz.pp/", "uggcf://nc.z-grnz.pp/"],
+  urls: [
+    "uggcf://xc.z-grnz.pp/",
+    "uggcf://mc.z-grnz.vb/",
+    "uggcf://kc.z-grnz.pp/",
+    "uggcf://nc.z-grnz.pp/",
+    "uggcf://arkg.z-grnz.pp/", // Next
+    "uggcf://bo.z-grnz.pp/",
+  ],
   formerHosts: ["xp.m-team.io", "pt.m-team.cc", "tp.m-team.cc"],
 
   category: [
@@ -172,6 +180,7 @@ export const siteMetadata: ISiteMetadata = {
       name: "類別（综合）",
       key: "categories_normal",
       keyPath: "data",
+      notes: "请先设置分类入口为“综合”！请勿与 成人 区类别同时选择！",
       options: siteCategory.filter((item) => item.type === "normal"),
       cross: { mode: "brackets", key: "categories" },
     },
@@ -179,6 +188,7 @@ export const siteMetadata: ISiteMetadata = {
       name: "類別（成人）",
       key: "categories_adult",
       keyPath: "data",
+      notes: "请先设置分类入口为“成人”！请勿与 综合 区类别同时选择！",
       options: siteCategory.filter((item) => item.type === "adult"),
       cross: { mode: "brackets", key: "categories" },
     },
@@ -362,6 +372,7 @@ export const siteMetadata: ISiteMetadata = {
           },
           levelId: { selector: "data.role", filters: [{ name: "parseNumber" }] },
           bonus: { selector: "data.memberCount.bonus", filters: [{ name: "parseNumber" }] },
+          lastAccessAt: { selector: "data.memberStatus.lastBrowse", filters: [{ name: "parseTime" }] },
         },
       },
       {
@@ -388,14 +399,42 @@ export const siteMetadata: ISiteMetadata = {
   },
 
   list: [
-    // next 域名下
+    // 2025.07.31: 原舊風格域名將移至 ob.
     {
-      urlPattern: [/\/\/next\..+\/browse/],
+      urlPattern: [/\/\/ob\..+\/browse/],
+      mergeSearchSelectors: false,
+      selectors: {
+        ...commonListSelectors,
+        rows: { selector: "tbody.bg-\\[\\#bccad6\\] > tr" },
+        subTitle: { selector: "a[href*='/detail/'] + br + div > span" },
+
+        time: {
+          selector: "td:nth-last-child(4) > span[title]",
+          elementProcess: (el: HTMLInputElement) => {
+            return el.getAttribute("title") || el.textContent;
+          },
+          filters: [{ name: "parseTime" }],
+        },
+        size: { selector: "td:nth-last-child(3)", filters: [{ name: "parseSize" }] },
+        seeders: { selector: 'span[aria-label="arrow-up"] + span' },
+        leechers: { selector: 'span[aria-label="arrow-down"] + span' },
+
+        comments: { selector: "td:nth-last-child(5)" },
+        category: { selector: "img[src*='/static/cate'][alt]", attr: "alt" },
+        ext_douban: { selector: "a[href^='https://movie.douban.com/subject/']", filters: [{ name: "extDoubanId" }] },
+        ext_imdb: { selector: "a[href^='https://www.imdb.com/title/']", filters: [{ name: "extImdbId" }] },
+      },
+    },
+
+    // 2025.07.31: 將於 20250801 將新風格(next域名)應用於主要域名(kp等等)
+    {
+      urlPattern: ["/browse"],
       mergeSearchSelectors: false,
       selectors: {
         ...commonListSelectors,
 
         rows: { selector: "div.app-content__inner table.w-full > tbody > tr" },
+        title: { selector: "a[href*='/detail/'] strong" },
         subTitle: { selector: "a[href*='/detail/'] + br + div > span:nth-last-child(1)" },
 
         time: {
@@ -421,31 +460,6 @@ export const siteMetadata: ISiteMetadata = {
         },
       },
     },
-    {
-      urlPattern: ["/browse"],
-      mergeSearchSelectors: false,
-      selectors: {
-        ...commonListSelectors,
-        rows: { selector: "tbody.bg-\\[\\#bccad6\\] > tr" },
-        subTitle: { selector: "a[href*='/detail/'] + br + div > span" },
-
-        time: {
-          selector: "td:nth-last-child(4) > span[title]",
-          elementProcess: (el: HTMLInputElement) => {
-            return el.getAttribute("title") || el.textContent;
-          },
-          filters: [{ name: "parseTime" }],
-        },
-        size: { selector: "td:nth-last-child(3)", filters: [{ name: "parseSize" }] },
-        seeders: { selector: 'span[aria-label="arrow-up"] + span' },
-        leechers: { selector: 'span[aria-label="arrow-down"] + span' },
-
-        comments: { selector: "td:nth-last-child(5)" },
-        category: { selector: "img[src*='/static/cate'][alt]", attr: "alt" },
-        ext_douban: { selector: "a[href^='https://movie.douban.com/subject/']", filters: [{ name: "extDoubanId" }] },
-        ext_imdb: { selector: "a[href^='https://www.imdb.com/title/']", filters: [{ name: "extImdbId" }] },
-      },
-    },
   ],
 
   detail: {
@@ -459,7 +473,14 @@ export const siteMetadata: ISiteMetadata = {
           return match ? match[1] : url;
         },
       },
-      title: { selector: "h2.title > span.align-middle" },
+      title: {
+        selector: ["h2 > span.align-middle", "title"],
+        filters: [
+          // 当回落到 title 中替换掉两侧的无关内容
+          { name: "replace", args: ['M-Team - TP :: 種子詳情 "', ""] },
+          { name: "replace", args: ['" - Powered by mTorrent', ""] },
+        ],
+      },
       link: { text: "" },
     },
   },
@@ -539,6 +560,48 @@ interface IMTeamRawTorrent {
   resetBox: any;
 }
 
+interface IMTeamTorrentHistory {
+  historyMap: Record<
+    string,
+    {
+      id: string;
+      createdDate: string;
+      lastModifiedDate: string | null;
+      userid: string;
+      torrent: string;
+      uploaded: string;
+      download: string;
+      uploadedReal: string;
+      downloadedReal: string;
+      seedtime: string;
+      leechtime: string;
+      timesCompleted: string;
+      lastCompleteDate: string;
+      lastAction: string;
+      startDate: string;
+    }
+  >;
+  peerMap: Record<
+    string,
+    {
+      uid: string;
+      tid: string;
+      ip: string;
+      ipv6: string | null;
+      port: string;
+      agent: string;
+      peerId: string;
+      left: string;
+      uploaded: string;
+      downloaded: string;
+      lastAction: string;
+      createdDate: string;
+      flags: string;
+      boxLimit: boolean;
+    }
+  >;
+}
+
 interface IMTeamRawResp<D> {
   code: string;
   data: D;
@@ -569,6 +632,7 @@ export default class MTeam extends PrivateSite {
     axiosConfig.headers = {
       ...(axiosConfig.headers ?? {}),
       "x-api-key": this.userConfig.inputSetting!.token ?? "", // FIXME 是否允许我们设置一个空字符？
+      origin: this.url, // MTeam site requires Origin header for CORS validation (added 2025-10-28)
     };
 
     return super.request<T>(axiosConfig, checkLogin);
@@ -612,7 +676,103 @@ export default class MTeam extends PrivateSite {
     return torrent;
   }
 
+  /**
+   * 批量查询种子的下载历史和状态
+   * @param tids 种子ID数组
+   * @returns 查询历史的响应数据
+   */
+  private async queryTorrentHistory(tids: string[]): Promise<IMTeamRawResp<IMTeamTorrentHistory>> {
+    const { data } = await this.request<IMTeamRawResp<any>>({
+      method: "POST",
+      url: "/api/tracker/queryHistory",
+      data: { tids },
+      headers: { "Content-Type": "application/json" },
+    });
+    return data;
+  }
+
+  /**
+   * 重写父类的transformSearchPage方法，在解析完所有种子后批量查询progress状态
+   */
+  public override async transformSearchPage(
+    doc: Document | object | any,
+    searchConfig: ISearchInput,
+  ): Promise<ITorrent[]> {
+    // 先获取基础的种子列表
+    const torrents = await super.transformSearchPage(doc, searchConfig);
+
+    if (torrents.length === 0) {
+      return torrents;
+    }
+
+    // 收集所有种子ID用于批量查询
+    const tids = torrents.map((torrent) => String(torrent.id)).filter(Boolean);
+
+    if (tids.length === 0) {
+      return torrents;
+    }
+
+    try {
+      // 批量查询种子的下载历史
+      const historyResp = await this.queryTorrentHistory(tids);
+
+      if (historyResp.code === "0" && historyResp.data) {
+        const { historyMap, peerMap } = historyResp.data;
+
+        // 为每个种子设置status，只在完成下载时设置progress=100
+        torrents.forEach((torrent) => {
+          const tid = String(torrent.id);
+          const history = historyMap[tid];
+          const peer = peerMap[tid];
+
+          if (history || peer) {
+            if (peer) {
+              // 如果在peerMap中存在，说明正在活跃（做种或下载）
+              const leftBytes = parseInt(peer.left || "0");
+              if (leftBytes === 0) {
+                // left为0表示完成下载，正在做种
+                torrent.progress = 100;
+                torrent.status = ETorrentStatus.seeding;
+              } else {
+                // left>0表示正在下载，不设置progress让前端UI适配
+                torrent.status = ETorrentStatus.downloading;
+              }
+            } else if (history) {
+              // 如果只在historyMap中存在但peerMap中不存在，说明曾经下载过但现在不活跃
+              const timesCompleted = parseInt(history.timesCompleted || "0");
+
+              if (timesCompleted > 0) {
+                // 完成过下载，但现在不做种
+                torrent.progress = 100;
+                torrent.status = ETorrentStatus.completed;
+              } else {
+                // 开始过下载但未完成，现在不活跃，不设置progress
+                torrent.status = ETorrentStatus.inactive;
+              }
+            }
+          } else {
+            // 如果在historyMap和peerMap中都不存在，说明从未下载过，不设置progress
+            torrent.status = ETorrentStatus.unknown;
+          }
+        });
+      }
+    } catch (error) {
+      // 如果查询历史失败，不影响基础的种子列表返回
+      console.warn(`[MTeam] Failed to query torrent history:`, error);
+    }
+
+    return torrents;
+  }
+
   public override async getTorrentDownloadLink(torrent: ITorrent): Promise<string> {
+    // fix: 如果 torrent 对象没有 id ，尝试从 link 中提取 (https://github.com/pt-plugins/PT-depiler/issues/600)
+    if (!torrent.id && torrent.link) {
+      const match = torrent.link.match(/\/detail\/(\d+)/);
+      if (match) {
+        torrent.id = match[1];
+      }
+    }
+
     const { data } = await this.request<IMTeamRawResp<string>>({
       method: "POST",
       url: "/api/torrent/genDlToken",

@@ -1,8 +1,8 @@
 import urlJoin from "url-join";
 
-import { EResultParseStatus, type ISiteMetadata, type IUserInfo } from "../types";
 import { createDocument } from "../utils";
 import PrivateSite from "../schemas/AbstractPrivateSite.ts";
+import { EResultParseStatus, type ISiteMetadata, type IUserInfo } from "../types";
 
 export const siteMetadata: ISiteMetadata = {
   id: "zhixing",
@@ -147,6 +147,10 @@ export const siteMetadata: ISiteMetadata = {
           seedingSize: {
             selector: ["p:contains('当前保种容量：')"],
             filters: [{ name: "parseSize" }],
+          },
+          lastAccessAt: {
+            selector: ["p:contains('上次IPv6访问时间：')", "p:contains('上次访问时间：')"],
+            filters: [{ name: "split", args: ["：", 1] }, { name: "parseTime" }],
           },
         },
       },

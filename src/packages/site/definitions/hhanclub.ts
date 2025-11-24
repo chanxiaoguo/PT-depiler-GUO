@@ -1,6 +1,12 @@
-import { ETorrentStatus, type ISiteMetadata } from "../types";
-import { CategoryInclbookmarked, CategoryIncldead, CategorySpstate, SchemaMetadata } from "../schemas/NexusPHP.ts";
-import { parseValidTimeString } from "@ptd/site";
+import { ETorrentStatus, type ISiteMetadata, IUserInfo } from "../types";
+import NexusPHP, {
+  CategoryInclbookmarked,
+  CategoryIncldead,
+  CategorySpstate,
+  SchemaMetadata,
+} from "../schemas/NexusPHP.ts";
+import { parseValidTimeString } from "../utils";
+import Sizzle from "sizzle";
 
 const hhLinkQuery = {
   selector: ['a[href*="download.php?id="]'],
@@ -175,6 +181,7 @@ export const siteMetadata: ISiteMetadata = {
       },
       tags: [
         ...SchemaMetadata.search!.selectors!.tags!,
+        { name: "Free", selector: "span.promotion-tag-free", color: "blue" },
         { name: "官方", selector: "a[href*='tag_id3=1']", color: "#0000ff" },
         { name: "完结", selector: "a[href*='tag_id17=1']", color: "#4682B4" },
         { name: "原创", selector: "a[href*='tag_id8=1']", color: "#ff3300" },
@@ -241,6 +248,23 @@ export const siteMetadata: ISiteMetadata = {
       bonusPerHour: {
         selector: [".grid .row-span-4"],
         filters: [{ name: "parseNumber" }],
+      },
+      seedingBonusPerHour: {
+        selector: [
+          "div:contains('你当前每小时能获取'):last",
+          "div:contains('You are currently getting'):last",
+          "div:contains('你當前每小時能獲取'):last",
+        ],
+        filters: [{ name: "parseNumber" }],
+      },
+      lastAccessAt: {
+        selector: ["span:contains('最近动向') + span"],
+        filters: [
+          (query: string) => {
+            query = query.split(" (")[0];
+            return parseValidTimeString(query);
+          },
+        ],
       },
     },
   },
@@ -324,3 +348,43 @@ export const siteMetadata: ISiteMetadata = {
     },
   ],
 };
+export default class Hhanclub extends NexusPHP {
+  // 使用基础憨豆+保种区额外做种积分作为seedingBonusPerHour
+  protected async parseUserInfoForSeedingBonusPerHour(
+    flushUserInfo: Partial<IUserInfo>,
+    dataDocument: Document,
+  ): Promise<Partial<IUserInfo>> {
+    // 从mybonus.php 页面，解析出 用户每小时获得憨豆无加成的部分 数值
+    const baseSeedingBonusPerHour = this.getFieldData(
+      dataDocument,
+      this.metadata.userInfo?.selectors?.seedingBonusPerHour!,
+    );
+
+    // 请求保重区结算日志页面，并解析出最近一次结算时获得的积分 数值
+    let rescueDocument = await this.getRescueDocument(flushUserInfo.id as number);
+    // 如果有分页，从最后一页获取
+    const totalPages = Sizzle("table + div b", rescueDocument);
+    if (totalPages.length > 0) {
+      rescueDocument = await this.getRescueDocument(
+        flushUserInfo.id as number,
+        parseInt(totalPages[totalPages.length - 1].textContent || "1") - 1,
+      );
+    }
+    const rescueSeedingBonusPerDay = this.getFieldData(rescueDocument, {
+      selector: ["table tbody tr:last-child > td:nth-of-type(6)"],
+      filters: [{ name: "parseNumber" }],
+    });
+    // 加和计算真实的 总做种积分 数值
+    flushUserInfo.seedingBonusPerHour = baseSeedingBonusPerHour + rescueSeedingBonusPerDay / 24;
+    return flushUserInfo;
+  }
+
+  private async getRescueDocument(userId: number, page: number = 0): Promise<Document> {
+    const { data: rescueDocument } = await this.request<Document>({
+      url: "/rescuesettleinfo.php",
+      params: { id: userId, page },
+      responseType: "document",
+    });
+    return rescueDocument;
+  }
+}
